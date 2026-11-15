@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>化学ノート 4択クイズ</title>
+  <link rel="stylesheet" href="quiz.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>化学ノート 4択クイズ</h1>
+      <div class="controls-top">
+        <select id="unit-select" aria-label="単元を選択">
+          <option value="all">すべての単元（全98問）</option>
+          <option value="unit1">第1回：物質の分類・変化・電気</option>
+          <option value="unit2">第2回：原子の構造・周期表・同位体</option>
+          <option value="unit3">第3回：原子量・放射線・電子配置</option>
+          <option value="unit4">第4回：イオン・化学結合・分子間力</option>
+          <option value="unit5">同素体・物質の性質・熱運動</option>
+          <option value="unit6">第5回：状態変化の熱・イオン式・結晶</option>
+          <option value="unit7">高分子化合物・配位結合・錯イオン</option>
+          <option value="wrong">★ 苦手リスト（間違えた問題）</option>
+        </select>
+        <button id="shuffle-btn" class="btn btn-sub">シャッフル</button>
+      </div>
+      <div class="status-bar">
+        <span id="progress-text">第 1 問 / 98 問</span>
+        <span id="score-text">正解数: 0</span>
+        <span id="wrong-count-badge" class="badge">苦手: 0問</span>
+      </div>
+    </header>
+
+    <main id="quiz-area" class="quiz-area">
+      <div class="question-box">
+        <div class="tags">
+          <span id="card-unit-tag" class="unit-tag">単元名</span>
+          <span id="card-wrong-mark" class="wrong-mark hidden">★ 苦手問題</span>
+        </div>
+        <p id="question-text" class="question-text">問題文</p>
+      </div>
+
+      <div id="choices-container" class="choices-container"></div>
+
+      <div id="feedback-box" class="feedback-box hidden">
+        <p id="feedback-title" class="feedback-title"></p>
+        <p id="feedback-explanation" class="feedback-explanation"></p>
+        <button id="next-btn" class="btn btn-primary next-btn">次の問題へ →</button>
+      </div>
+    </main>
+
+    <div id="empty-message" class="empty-message hidden">
+      <p>この単元（または苦手リスト）に問題がありません。</p>
+      <button id="back-to-all-btn" class="btn btn-primary">すべての単元に戻る</button>
+    </div>
+
+    <footer class="app-footer">
+      <button id="clear-wrong-btn" class="btn-link">苦手リストをすべてリセット</button>
+    </footer>
+  </div>
+
+  <script>
+    // ノートの全12ページから作成した4択クイズデータ（choices[0]が正解）
+    const quizData = [
+      // --- 第1回：物質の分類・変化・電気 ---
+      { id: 1, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "物質をつくるもととなる粒子を何というか？また、その粒子の種類のことを何というか？", choices: ["粒子：原子 ／ 種類：元素", "粒子：元素 ／ 種類：原子", "粒子：分子 ／ 種類：単体", "粒子：イオン ／ 種類：化合物"], exp: "物質をつくるもととなる粒子が「原子」、原子の種類を「元素」、原子が結びついた粒子を「分子」という。" },
+      { id: 2, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "物質の「材質が変わらない変化」はどれか？", choices: ["溶解や状態変化（物理変化）", "分解や中和（化学変化）", "酸化や還元（化学変化）", "燃焼や電気分解（化学変化）"], exp: "溶解（溶媒に溶ける）や状態変化（固体・液体・気体の変化）は材質が変わらない「物理変化」である。" },
+      { id: 3, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "「1gあたりの物質の温度を1℃あげるのに必要な熱量」を表す量はどれか？", choices: ["比熱", "密度", "質量", "熱容量"], exp: "単位体積あたりの質量が「密度」、1gあたりの温度を1℃あげるのに必要な熱量が「比熱」である。" },
+      { id: 4, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "「その物体が表している物質そのものの量」と「それに重力加速度をかけた値」の組み合わせは？", choices: ["物質そのものの量：質量 ／ 重力加速度をかけた値：重さ", "物質そのものの量：重さ ／ 重力加速度をかけた値：質量", "物質そのものの量：体積 ／ 重力加速度をかけた値：密度", "物質そのものの量：密度 ／ 重力加速度をかけた値：体積"], exp: "場所によって変わらない物質そのものの量が「質量」、重力加速度をかけた値が「重さ」である。" },
+      { id: 5, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "電流 I [A]、電圧 V [V]、電気抵抗 R [Ω] の関係式（オームの法則）はどれか？", choices: ["V = IR", "I = VR", "R = IV", "V = I / R"], exp: "オームの法則は V = IR で表される。" },
+
+      // --- 第2回：原子の構造・周期表・同位体 ---
+      { id: 6, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "ドルトンの原子説の内容として誤っているものはどれか？", choices: ["原子は化学変化によって別の種類の原子に変わることがある", "原子はそれ以上分割できない", "それぞれの種類によって原子の大きさと質量が決まっている", "原子はなくなったり新しくできたりすることはない"], exp: "ドルトンの原子説では「他の原子に変わったり、なくなったり、新しくできたりすることはない」とされている。" },
+      { id: 7, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "陽子・中性子・電子の「質量比」として正しいものはどれか？", choices: ["陽子 1 ： 中性子 約1 ： 電子 約1/1840", "陽子 1 ： 中性子 0 ： 電子 約1/1840", "陽子 約1840 ： 中性子 1 ： 電子 1", "陽子 1 ： 中性子 約1/1840 ： 電子 約1"], exp: "陽子と中性子の質量はほぼ等しく（1 : 約1）、電子は陽子の約1/1840しかない。" },
+      { id: 8, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "記号 ⁴₂He の原子核に含まれる「陽子の数」と「中性子の数」の組み合わせは？", choices: ["陽子 2個 ／ 中性子 2個", "陽子 4個 ／ 中性子 2個", "陽子 2個 ／ 中性子 4個", "陽子 4個 ／ 中性子 0個"], exp: "左下の原子番号（2）が陽子の数、左上の質量数（4）から陽子の数を引いた 4 - 2 = 2 が中性子の数である。" },
+      { id: 9, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "周期表の同族元素の名称と族番号の組み合わせとして正しいものはどれか？", choices: ["17族：ハロゲン", "1族（Hを除く）：アルカリ土類金属", "2族：アルカリ金属", "18族：遷移元素"], exp: "H以外の1族はアルカリ金属、2族はアルカリ土類金属、17族はハロゲン、18族は貴ガスである。" },
+      { id: 10, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "「典型元素」と「遷移元素」の特徴として正しいものはどれか？", choices: ["典型元素は1〜2族・13〜18族で、族（縦）で似た性質を示す", "典型元素は3〜12族で、周期（横）で似た性質を示す", "遷移元素は1〜2族・13〜18族で、周期（横）で似た性質を示す", "遷移元素は3〜12族で、族（縦）で似た性質を示す"], exp: "典型元素（1〜2族, 13〜18族）は縦の「族」で、遷移元素（3〜12族）は横の「周期」で似た性質を示す。" },
+      { id: 11, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "「同位体（アイソトープ）」の説明として正しいものはどれか？", choices: ["陽子の数が同じで、中性子の数（質量数）が異なる原子どうし", "中性子の数が同じで、陽子の数（原子番号）が異なる原子どうし", "同じ元素からなる単体で、性質が異なるものどうし", "質量数が同じで、電子の数が異なるイオンどうし"], exp: "同位体は「原子番号（陽子の数）が同じで、質量数（中性子の数）が異なる原子どうし」である。" },
+      { id: 12, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "水素の同位体 ³H（三重水素）が持つ中性子の数は何個か？", choices: ["2個", "0個", "1個", "3個"], exp: "水素の原子番号（陽子の数）は1なので、質量数3の ³H の中性子数は 3 - 1 = 2個である。" },
+
+      // --- 第3回：原子量・放射線・電子配置 ---
+      { id: 13, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "原子の「相対質量」の基準となっている原子と数値はどれか？", choices: ["¹²C 1個の質量を 12 とする", "¹H 1個の質量を 1 とする", "¹⁶O 1個の質量を 16 とする", "¹⁴N 1個の質量を 14 とする"], exp: "炭素原子 ¹²C 1個の質量を 12 と定めて基準にしている。" },
+      { id: 14, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "内側から n 番目の電子殻の最大収容数を表す式と、M殻（n=3）の最大収容数は？", choices: ["式：2n² ／ M殻：18個", "式：2n² ／ M殻：8個", "式：n² ／ M殻：9個", "式：2n + 2 ／ M殻：8個"], exp: "最大収容数は 2n² 個。K(1)=2個, L(2)=8個, M(3)=18個, N(4)=32個となる。" },
+      { id: 15, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "高校化学で、結合に関与する電子として数える「価電子」は、貴ガス（18族）では何個と考えるか？", choices: ["0個", "8個", "2個", "18個"], exp: "高校化学では、価電子を結合に関与する最外殻電子として扱うため、安定な貴ガスの価電子は0個とする。なお、最外殻電子数はHeが2個、その他の貴ガスが8個である。" },
+      { id: 16, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "貴ガス（18族）の電子配置が安定している理由となる2つの状態は何か？", choices: ["閉殻 と オクテット", "同素体 と 同位体", "共有結合 と 配位結合", "電離 と 昇華"], exp: "すべての軌道に電子が入った「閉殻」と、最外殻の4軌道に8個の電子が入った「オクテット」の状態をとるため安定している。" },
+      { id: 17, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "放射性同位体（ラジオアイソトープ）の数が半分になる時間を何というか？", choices: ["半減期", "トレーサー期", "壊変定数", "比熱"], exp: "着目物質の数（濃度）が半分になる時間を「半減期」といい、考古学年代測定などに利用される。" },
+
+      // --- 第4回：イオン・化学結合・分子間力 ---
+      { id: 18, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "原子が電子を「受け取って」できたイオンを何というか？", choices: ["陰イオン（負の電荷）", "陽イオン（正の電荷）", "錯イオン（正の電荷）", "多原子イオン（負の電荷）"], exp: "電子を受け取ると負の電荷を持つ「陰イオン」になり、電子を放出すると正の電荷を持つ「陽イオン」になる。" },
+      { id: 19, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "金属原子どうしを結びつけている、特定の原子に所属せず金属全体を移動できる電子を何というか？", choices: ["自由電子", "不対電子", "非共有電子対", "価電子"], exp: "金属結合では、自由電子が金属全体を自由に動き回ることで陽イオンどうしを結びつけている。" },
+      { id: 20, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "どんな分子にも分子間にはたらく力で、分子量が大きいほど強くなる力はどれか？", choices: ["ファンデルワールス力", "クーロン力", "水素結合", "配位結合"], exp: "無極性分子・極性分子を問わずすべての分子間にはたらく弱い引力をファンデルワールス力という。" },
+      { id: 21, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "水素結合は、水素原子 H が電気陰性度の大きいどの原子の間に介在するときに生じるか？", choices: ["F, O, N など", "C, H, S など", "Na, K, Ca など", "He, Ne, Ar など"], exp: "電気陰性度が特に大きい F（フッ素）、O（酸素）、N（窒素）などの間を H が仲立ちして水素結合が生じる。" },
+
+      // --- 同素体・物質の性質・熱運動 ---
+      { id: 22, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "同素体をもつ代表的な4元素（SCOP）の正しい組み合わせはどれか？", choices: ["硫黄(S)・炭素(C)・酸素(O)・リン(P)", "ケイ素(Si)・炭素(C)・酸素(O)・リン(P)", "硫黄(S)・塩素(Cl)・酸素(O)・カリウム(K)", "ナトリウム(Na)・炭素(C)・酸素(O)・リン(P)"], exp: "同素体をもつ代表的な4元素は S（硫黄）、C（炭素）、O（酸素）、P（リン）である。" },
+      { id: 23, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "炭素 C の同素体のうち、電気伝導性と金属光沢をもち、層状構造（1層はグラフェン）をとるものはどれか？", choices: ["グラファイト（黒鉛）", "ダイヤモンド", "フラーレン（C₆₀）", "カーボンナノチューブ"], exp: "グラファイト（黒鉛）は平面の層状構造で、やわらかくもろいが電気伝導性と金属光沢がある。" },
+      { id: 24, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "リン P の同素体「黄リン」と「赤リン」の特徴として正しいものはどれか？", choices: ["黄リンは有毒で空気中で自然発火するため水中に保存する", "赤リンは有毒で二硫化炭素に溶けやすい", "黄リンは無毒で熱的に非常に安定している", "赤リンは正四面体型の P₄ 分子である"], exp: "黄リン（P₄）は有毒・自然発火・CS₂に可溶。赤リンは無毒・安定・CS₂に不溶である。" },
+      { id: 25, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "硫黄 S の同素体3つのうち、室温で最も安定しており、結晶がほぼ正八面体になるものはどれか？", choices: ["斜方硫黄（S₈）", "単斜硫黄（S₈）", "ゴム状硫黄（Sₓ）", "無定形硫黄（S）"], exp: "斜方硫黄（S₈）は室温で最も安定している。単斜硫黄やゴム状硫黄も放置すると斜方硫黄に変化する。" },
+      { id: 26, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "「水に溶かしたときに電離して電気を伝える物質」を何というか？", choices: ["電解質", "非電解質", "単体", "錯体"], exp: "水に溶けて電離し電気を通す物質が「電解質」、電離せず電気を通さない物質が「非電解質」である。" },
+      { id: 27, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "熱運動が最も小さくなる温度である絶対零度は約何℃か？また、27℃は約何 K か？", choices: ["絶対零度：-273℃ ／ 27℃ ＝ 300 K", "絶対零度：0℃ ／ 27℃ ＝ 273 K", "絶対零度：-273℃ ／ 27℃ ＝ 246 K", "絶対零度：-100℃ ／ 27℃ ＝ 127 K"], exp: "絶対零度は正確には -273.15℃（0 K）で、高校化学では約 -273℃とする。T [K] = t [℃] + 273 なので、27℃は約300 Kとなる。" },
+      { id: 28, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "気体や液体中の微粒子が、熱運動する粒子の衝突を受けて不規則に運動する現象を何というか？", choices: ["ブラウン運動", "拡散", "昇華", "へき開"], exp: "微粒子の不規則な動きが「ブラウン運動」、粒子が均一に広がっていく現象が「拡散」である。" },
+
+      // --- 第5回：状態変化の熱・イオン式・結晶 ---
+      { id: 29, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "「気体から固体へ」直接変化する現象と、そのときの熱の出入りとして正しいものは？", choices: ["凝華（昇華）・発熱変化", "昇華・吸熱変化", "凝縮・発熱変化", "凝固・吸熱変化"], exp: "固体→気体は昇華（吸熱）、気体→固体は凝華または昇華（発熱）である。" },
+      { id: 30, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "次の多原子イオンの化学式と価数の組み合わせとして正しいものはどれか？", choices: ["リン酸イオン：PO₄³⁻", "硝酸イオン：NO₃²⁻", "硫酸イオン：SO₄⁻", "炭酸イオン：CO₃³⁻"], exp: "硝酸イオンは NO₃⁻（1価）、硫酸イオンは SO₄²⁻（2価）、炭酸イオンは CO₃²⁻（2価）、リン酸イオンは PO₄³⁻（3価）である。" },
+      { id: 31, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "「炭酸アンモニウム」と「リン酸マグネシウム」の組成式の組み合わせとして正しいものは？", choices: ["(NH₄)₂CO₃ と Mg₃(PO₄)₂", "NH₄CO₃ と MgPO₄", "(NH₄)₂CO₃ と Mg₂(PO₄)₃", "NH₄(CO₃)₂ と Mg₃(PO₄)₂"], exp: "NH₄⁺ と CO₃²⁻ から (NH₄)₂CO₃、Mg²⁺ と PO₄³⁻ から Mg₃(PO₄)₂ となる。" },
+      { id: 32, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "次のうち、金属元素を含まないイオン結晶で、膨張剤として利用されるものはどれか？", choices: ["炭酸水素アンモニウム（NH₄HCO₃）", "塩化アンモニウム（NH₄Cl）", "炭酸マグネシウム（MgCO₃）", "硝酸鉄(III)（Fe(NO₃)₃）"], exp: "炭酸水素アンモニウム（NH₄HCO₃）は重曹と配合してベーキングパウダーなどに使われる。塩化アンモニウムは窒素肥料や溶接に使われる。" },
+      { id: 33, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "イオン結晶の性質として誤っているものはどれか？", choices: ["固体のままでもよく電気を通す", "硬いがもろく、特定の方向に簡単に割れる（へき開する）", "電気的な引力が強いため融点が高いものが多い", "塩化銀 AgCl や硫酸バリウム BaSO₄ は水に溶けにくい"], exp: "イオン結晶は固体の状態ではイオンが動けないため電気を通さない（融解したり水に溶かしたりすると電気を通す）。" },
+      { id: 34, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "イオン間のクーロン力 F の公式はどれか？（電荷 q₁, q₂、イオン間距離 r、定数 k）", choices: ["F = k · (q₁q₂) / r²", "F = k · (q₁ + q₂) / r", "F = k · r² / (q₁q₂)", "F = k · (q₁q₂) · r²"], exp: "クーロン力は電荷の積に比例し、イオン間距離の2乗に反比例する。" },
+
+      // --- 高分子化合物・共有結合の結晶・配位結合・錯イオン ---
+      { id: 35, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "高分子化合物を構成する比較的小さな分子を何というか？また、それがつながった分子を何というか？", choices: ["小さな分子：単量体（モノマー） ／ つながった分子：重合体（ポリマー）", "小さな分子：重合体（ポリマー） ／ つながった分子：単量体（モノマー）", "小さな分子：配位子 ／ つながった分子：錯体", "小さな分子：同位体 ／ つながった分子：同素体"], exp: "もとの小さな分子が「単量体（モノマー）」、共有結合で多数つながったものが「重合体（ポリマー）」である。" },
+      { id: 36, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "単量体の分子間から簡単な分子が「離脱しながら」重合する反応を何というか？（例：PET）", choices: ["縮合重合", "付加重合", "開環重合", "中和反応"], exp: "簡単な分子（水など）が離脱しながらつながるのが縮合重合、C=C結合が開いてつながるのが付加重合である。" },
+      { id: 37, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "天然高分子化合物である「デンプン」と「タンパク質」の単量体（モノマー）の組み合わせは？", choices: ["デンプン：糖 ／ タンパク質：アミノ酸", "デンプン：アミノ酸 ／ タンパク質：糖", "デンプン：エチレン ／ タンパク質：テレフタル酸", "デンプン：脂肪酸 ／ タンパク質：グリセリン"], exp: "デンプンの単量体は糖（グルコースなど）、タンパク質の単量体はアミノ酸である。" },
+      { id: 38, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "共有結合の結晶に一般的に見られる性質として、誤っているものはどれか？", choices: ["すべて電気をよく通す", "非常に硬く、融点が高い", "水に溶けない", "電気伝導性はない（ただし黒鉛は例外）"], exp: "共有結合の結晶は原則として電気伝導性がない（例外として黒鉛だけは電気を通す）。" },
+      { id: 39, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "「電子対が一方の原子だけから提供されて」できた結合を何というか？（例：NH₄⁺）", choices: ["配位結合", "イオン結合", "金属結合", "水素結合"], exp: "一方の原子の非共有電子対が提供されてできる結合が「配位結合」で、できあがると普通の共有結合と見分けがつかない。" },
+      { id: 40, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "錯イオン「テトラアンミン亜鉛(II)イオン」の化学式と立体構造（形）の組み合わせは？", choices: ["[Zn(NH₃)₄]²⁺ ／ 正四面体形", "[Zn(NH₃)₄]²⁺ ／ 正方形", "[Zn(NH₃)₆]²⁺ ／ 正八面体形", "[Zn(CN)₄]²⁻ ／ 正四面体形"], exp: "Zn²⁺ に NH₃ が4つ配位した [Zn(NH₃)₄]²⁺ は正四面体形をとる。" },
+      { id: 41, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "錯イオン「テトラアンミン銅(II)イオン」の化学式と立体構造（形）の組み合わせは？", choices: ["[Cu(NH₃)₄]²⁺ ／ 正方形", "[Cu(NH₃)₄]²⁺ ／ 正四面体形", "[Cu(NH₃)₆]²⁺ ／ 正八面体形", "[Cu(CN)₄]²⁻ ／ 正方形"], exp: "Cu²⁺ に NH₃ が4つ配位した [Cu(NH₃)₄]²⁺ は平面の正方形をとる。" },
+      { id: 42, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "錯イオン「ヘキサシアニド鉄(III)酸イオン」の化学式と価数、立体構造はどれか？", choices: ["[Fe(CN)₆]³⁻（価数 -3 ／ 正八面体形）", "[Fe(CN)₆]⁴⁻（価数 -4 ／ 正八面体形）", "[Fe(NH₃)₆]³⁺（価数 +3 ／ 正八面体形）", "[Fe(CN)₄]⁻（価数 -1 ／ 正方形）"], exp: "Fe³⁺（+3）に CN⁻（-1）が6つ配位しているため、全体の価数は +3 + (-1)×6 = -3 となり、[Fe(CN)₆]³⁻（正八面体形）となる。" },
+
+      // --- 追加問題：各単元8問 ---
+      { id: 43, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "密度を求める式はどれか？", choices: ["密度＝質量÷体積", "密度＝体積÷質量", "密度＝質量×体積", "密度＝質量＋体積"], exp: "密度は単位体積あたりの質量で、ρ=m/Vで表す。" },
+      { id: 44, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "質量54 g、体積20 cm³の物質の密度は？", choices: ["2.7 g/cm³", "0.37 g/cm³", "34 g/cm³", "74 g/cm³"], exp: "54÷20＝2.7より、密度は2.7 g/cm³。" },
+      { id: 45, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "固体が液体になる状態変化を何というか？", choices: ["融解", "凝固", "蒸発", "凝縮"], exp: "固体から液体への変化は融解である。" },
+      { id: 46, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "液体の内部からも気化が起こる現象は？", choices: ["沸騰", "蒸発", "凝縮", "昇華"], exp: "沸騰は液体表面だけでなく内部からも気化が起こる。" },
+      { id: 47, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "化学変化の前後で必ず保存される量は？", choices: ["全体の質量", "物質の色", "分子の種類", "体積"], exp: "閉じた系では反応前後の全質量が等しい。" },
+      { id: 48, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "電力P、電圧V、電流Iの関係は？", choices: ["P＝VI", "P＝V/I", "P＝I/V", "P＝V＋I"], exp: "電力は電圧と電流の積で求める。" },
+      { id: 49, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "100 Vで2 A流れる器具の電力は？", choices: ["200 W", "50 W", "102 W", "0.02 W"], exp: "P＝VI＝100×2＝200 W。" },
+      { id: 50, unit: "unit1", unitName: "第1回：物質・変化・電気", q: "直列回路で各部分を流れる電流はどうなるか？", choices: ["どこでも等しい", "抵抗が大きいほど大きい", "電源に近いほど大きい", "途中でゼロになる"], exp: "直列回路では電流の通り道が1本なので電流は等しい。" },
+      { id: 51, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "原子番号が表すものは？", choices: ["陽子の数", "中性子の数", "陽子と中性子の合計", "電子殻の数"], exp: "原子番号は原子核中の陽子数に等しい。" },
+      { id: 52, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "質量数が表すものは？", choices: ["陽子数と中性子数の合計", "電子数だけ", "中性子数だけ", "陽子数と電子数の合計"], exp: "質量数は核子数、つまり陽子数＋中性子数。" },
+      { id: 53, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "中性の原子で、陽子数と等しいものは？", choices: ["電子数", "中性子数", "質量数", "電子殻数"], exp: "電気的に中性なら正電荷と負電荷の数が等しい。" },
+      { id: 54, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "周期表の横の並びを何というか？", choices: ["周期", "族", "系列", "軌道"], exp: "周期表の横の行は周期、縦の列は族。" },
+      { id: 55, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "周期表の縦の同じ列にある元素の特徴は？", choices: ["化学的性質が似ている", "原子番号が同じ", "質量数が同じ", "すべて気体である"], exp: "同族元素は価電子数が共通し、性質が似る。" },
+      { id: 56, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "1族元素のうち水素を除く元素群は？", choices: ["アルカリ金属", "ハロゲン", "希ガス", "アルカリ土類金属"], exp: "Li、Na、Kなどはアルカリ金属。" },
+      { id: 57, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "17族元素を何というか？", choices: ["ハロゲン", "希ガス", "アルカリ金属", "遷移元素"], exp: "F、Cl、Br、Iなどの17族元素はハロゲン。" },
+      { id: 58, unit: "unit2", unitName: "第2回：原子・周期表・同位体", q: "同位体どうしで必ず等しいものは？", choices: ["陽子数", "中性子数", "質量数", "原子の質量"], exp: "同位体は陽子数が同じで、中性子数が異なる。" },
+      { id: 59, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "炭素12原子1個の質量の何分の1を原子量の基準とするか？", choices: ["12分の1", "6分の1", "10分の1", "16分の1"], exp: "相対原子質量は炭素12の質量の12分の1を基準とする。" },
+      { id: 60, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "塩素の原子量が約35.5になる主な理由は？", choices: ["質量数の異なる同位体が一定割合で存在するから", "塩素原子が半分に分かれるから", "電子の質量が非常に大きいから", "塩素が必ず二原子分子だから"], exp: "同位体の相対質量を存在比で加重平均するため。" },
+      { id: 61, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "K殻に収容できる電子の最大数は？", choices: ["2個", "8個", "18個", "32個"], exp: "2n²でn=1より2個。" },
+      { id: 62, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "L殻に収容できる電子の最大数は？", choices: ["8個", "2個", "18個", "32個"], exp: "2n²でn=2より8個。" },
+      { id: 63, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "ナトリウム原子（原子番号11）の電子配置は？", choices: ["2、8、1", "2、7、2", "2、8、8", "1、8、2"], exp: "11個の電子を内側から入れると2、8、1。" },
+      { id: 64, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "塩素原子（原子番号17）の価電子数は？", choices: ["7個", "1個", "8個", "17個"], exp: "電子配置2、8、7なので最外殻電子は7個。" },
+      { id: 65, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "α線の正体は？", choices: ["ヘリウム原子核", "高速の電子", "電磁波", "中性子だけの粒子"], exp: "α線は陽子2個と中性子2個からなるヘリウム原子核。" },
+      { id: 66, unit: "unit3", unitName: "第3回：原子量・放射線・電子配置", q: "γ線の正体は？", choices: ["波長の短い電磁波", "高速の電子", "ヘリウム原子核", "陽子線"], exp: "γ線は電荷を持たない高エネルギーの電磁波。" },
+      { id: 67, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "原子が電子を失ってできるイオンは？", choices: ["陽イオン", "陰イオン", "中性子", "分子"], exp: "電子を失うと正電荷が過剰になり陽イオンになる。" },
+      { id: 68, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "Na原子が電子1個を失うと何になるか？", choices: ["Na⁺", "Na⁻", "Na²⁺", "Na²⁻"], exp: "電子1個を失うため1価の陽イオンNa⁺になる。" },
+      { id: 69, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "Cl原子が電子1個を受け取ると何になるか？", choices: ["Cl⁻", "Cl⁺", "Cl²⁻", "Cl²⁺"], exp: "電子1個を受け取り1価の陰イオンCl⁻になる。" },
+      { id: 70, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "イオン結合をつくる主な力は？", choices: ["陽イオンと陰イオンの静電気的引力", "自由電子による引力", "分子間力だけ", "重力"], exp: "反対符号の電荷どうしのクーロン力で結びつく。" },
+      { id: 71, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "共有結合で原子間に共有されるものは？", choices: ["電子対", "陽子対", "中性子対", "原子核"], exp: "共有電子対を介して原子が結びつく。" },
+      { id: 72, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "電気陰性度が大きい原子は共有電子対をどうするか？", choices: ["より強く引きつける", "完全に放出する", "引きつけない", "原子核へ取り込む"], exp: "電気陰性度は共有電子対を引きつける強さの尺度。" },
+      { id: 73, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "水分子H₂Oが極性分子になる理由は？", choices: ["O-H結合に極性があり、分子が折れ線形だから", "水素結合が全くないから", "直線形で極性が打ち消されるから", "イオン結合だけでできているから"], exp: "結合の極性が分子の形により打ち消されず、分子全体に偏りが残る。" },
+      { id: 74, unit: "unit4", unitName: "第4回：イオン・化学結合・分子間力", q: "二酸化炭素CO₂が無極性分子である理由は？", choices: ["直線形で2本の結合の極性が打ち消し合うから", "C=O結合に極性がないから", "イオン結合だから", "水素結合をつくるから"], exp: "個々のC=O結合は極性を持つが、直線形で相殺される。" },
+      { id: 75, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "ダイヤモンドの結合と構造の特徴は？", choices: ["炭素原子が共有結合で立体網目状につながる", "分子が弱い力だけで集まる", "金属結合の層状構造", "イオンが交互に並ぶ"], exp: "ダイヤモンドは共有結合の結晶で立体網目構造を持つ。" },
+      { id: 76, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "黒鉛が電気を通す理由は？", choices: ["層内を動ける電子があるから", "陽イオンが自由に動くから", "水に溶けて電離するから", "炭素原子が陽イオンになって層間を移動するから"], exp: "黒鉛では一部の電子が層内を移動できる。" },
+      { id: 77, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "オゾンの化学式は？", choices: ["O₃", "O₂", "CO₃", "SO₃"], exp: "オゾンは酸素原子3個からなる酸素の同素体。" },
+      { id: 78, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "酸素O₂とオゾンO₃の関係は？", choices: ["同素体", "同位体", "異性体", "同じ物質"], exp: "同じ元素からなる性質の異なる単体なので同素体。" },
+      { id: 79, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "非電解質の水溶液の特徴は？", choices: ["ほとんど電気を通さない", "必ず青色になる", "必ず沈殿する", "強く発熱する"], exp: "非電解質は水中でイオンに分かれないため電気を通しにくい。" },
+      { id: 80, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "温度が上がると一般に粒子の熱運動はどうなるか？", choices: ["激しくなる", "止まる", "一定のまま", "必ず規則正しくなる"], exp: "温度上昇は粒子の平均運動エネルギーの増加に対応する。" },
+      { id: 81, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "0 ℃はおよそ何Kか？", choices: ["273 K", "0 K", "100 K", "373 K"], exp: "T[K]＝t[℃]＋273より0 ℃は約273 K。" },
+      { id: 82, unit: "unit5", unitName: "同素体・物質の性質・熱運動", q: "拡散が速くなる条件として適切なものは？", choices: ["温度を上げる", "絶対零度に近づける", "粒子の運動を止める", "必ず圧力をゼロにする"], exp: "温度が高いほど熱運動が激しくなり、一般に拡散が速い。" },
+      { id: 83, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "固体が液体になるとき、物質は熱をどうするか？", choices: ["吸収する", "放出する", "熱の出入りはない", "必ず燃焼する"], exp: "融解は吸熱変化である。" },
+      { id: 84, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "液体が固体になるとき、物質は熱をどうするか？", choices: ["放出する", "吸収する", "熱の出入りはない", "必ず昇華する"], exp: "凝固は発熱変化である。" },
+      { id: 85, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "液体が気体になる状態変化は？", choices: ["気化", "凝縮", "凝固", "凝華"], exp: "液体から気体への変化を気化という。" },
+      { id: 86, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "硫酸イオンの化学式は？", choices: ["SO₄²⁻", "SO₃²⁻", "S²⁻", "HSO₄²⁺"], exp: "硫酸イオンはSO₄²⁻。" },
+      { id: 87, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "アンモニウムイオンの化学式は？", choices: ["NH₄⁺", "NH₃⁺", "NO₃⁻", "NH₂⁻"], exp: "アンモニウムイオンはNH₄⁺で1価の陽イオン。" },
+      { id: 88, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "塩化カルシウムの組成式は？", choices: ["CaCl₂", "Ca₂Cl", "CaCl", "Ca₂Cl₂"], exp: "Ca²⁺の電荷をCl⁻2個で打ち消すためCaCl₂。" },
+      { id: 89, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "酸化アルミニウムの組成式は？", choices: ["Al₂O₃", "AlO", "AlO₂", "Al₃O₂"], exp: "Al³⁺2個とO²⁻3個で電荷が打ち消し合う。" },
+      { id: 90, unit: "unit6", unitName: "第5回：状態変化の熱・イオン式・結晶", q: "金属結晶が電気をよく通す主な理由は？", choices: ["自由電子が移動できるから", "陽イオンが固体中を自由に移動するから", "分子が蒸発するから", "共有電子対が全くないから"], exp: "金属中の自由電子が電荷を運ぶ。" },
+      { id: 91, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "エチレンからポリエチレンができる重合は？", choices: ["付加重合", "縮合重合", "中和", "加水分解"], exp: "C=C結合が開いて次々につながる付加重合。" },
+      { id: 92, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "ポリエチレンの単量体は？", choices: ["エチレン", "プロピレン", "スチレン", "塩化ビニル"], exp: "ポリエチレンはエチレンCH₂=CH₂の付加重合でできる。" },
+      { id: 93, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "ポリプロピレンの単量体は？", choices: ["プロピレン", "エチレン", "アセチレン", "ベンゼン"], exp: "ポリプロピレンはプロピレンの付加重合体。" },
+      { id: 94, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "ポリ塩化ビニルの単量体は？", choices: ["塩化ビニル", "酢酸ビニル", "スチレン", "テトラフルオロエチレン"], exp: "塩化ビニルCH₂=CHClが付加重合する。" },
+      { id: 95, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "ナイロン66をつくる2種類の単量体は？", choices: ["ヘキサメチレンジアミンとアジピン酸", "エチレングリコールとテレフタル酸", "エチレンと塩素", "グルコースとアミノ酸"], exp: "ジアミンとジカルボン酸が縮合してナイロン66になる。" },
+      { id: 96, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "PETをつくる2種類の単量体は？", choices: ["エチレングリコールとテレフタル酸", "ヘキサメチレンジアミンとアジピン酸", "エチレンとプロピレン", "スチレンと塩化ビニル"], exp: "PETはエチレングリコールとテレフタル酸の縮合重合体。" },
+      { id: 97, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "錯イオンで中心金属に結合する分子やイオンを何というか？", choices: ["配位子", "単量体", "電解質", "同位体"], exp: "非共有電子対を中心金属へ提供するものを配位子という。" },
+      { id: 98, unit: "unit7", unitName: "高分子・配位結合・錯イオン", q: "錯イオン[Ag(NH₃)₂]⁺の配位数は？", choices: ["2", "1", "3", "4"], exp: "Ag⁺にNH₃が2個配位しているので配位数は2。" }
+
+    ];
+
+    // 状態管理
+    let currentDeck = [...quizData];
+    let currentIndex = 0;
+    let score = 0;
+    let answered = false;
+    let wrongIds = JSON.parse(localStorage.getItem('chem_quiz_wrong_ids') || '[]');
+
+    // DOM要素
+    const unitSelect = document.getElementById('unit-select');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const progressText = document.getElementById('progress-text');
+    const scoreText = document.getElementById('score-text');
+    const wrongCountBadge = document.getElementById('wrong-count-badge');
+    const quizArea = document.getElementById('quiz-area');
+    const cardUnitTag = document.getElementById('card-unit-tag');
+    const cardWrongMark = document.getElementById('card-wrong-mark');
+    const questionText = document.getElementById('question-text');
+    const choicesContainer = document.getElementById('choices-container');
+    const feedbackBox = document.getElementById('feedback-box');
+    const feedbackTitle = document.getElementById('feedback-title');
+    const feedbackExplanation = document.getElementById('feedback-explanation');
+    const nextBtn = document.getElementById('next-btn');
+    const emptyMessage = document.getElementById('empty-message');
+    const backToAllBtn = document.getElementById('back-to-all-btn');
+    const clearWrongBtn = document.getElementById('clear-wrong-btn');
+
+    function saveWrongIds() {
+      localStorage.setItem('chem_quiz_wrong_ids', JSON.stringify(wrongIds));
+      updateStatus();
+    }
+
+    function updateStatus() {
+      wrongCountBadge.textContent = `苦手: ${wrongIds.length}問`;
+      scoreText.textContent = `正解数: ${score}`;
+      if (currentDeck.length > 0) {
+        progressText.textContent = `第 ${currentIndex + 1} 問 / ${currentDeck.length} 問`;
+      } else {
+        progressText.textContent = `0 / 0 問`;
+      }
+    }
+
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function filterDeck() {
+      const selected = unitSelect.value;
+      if (selected === 'all') {
+        currentDeck = [...quizData];
+      } else if (selected === 'wrong') {
+        currentDeck = quizData.filter(item => wrongIds.includes(item.id));
+      } else {
+        currentDeck = quizData.filter(item => item.unit === selected);
+      }
+      currentIndex = 0;
+      score = 0;
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      answered = false;
+      feedbackBox.classList.add('hidden');
+      updateStatus();
+
+      if (currentDeck.length === 0) {
+        quizArea.classList.add('hidden');
+        emptyMessage.classList.remove('hidden');
+        return;
+      }
+
+      quizArea.classList.remove('hidden');
+      emptyMessage.classList.add('hidden');
+
+      if (currentIndex >= currentDeck.length) {
+        currentIndex = 0;
+        score = 0;
+        updateStatus();
+      }
+
+      const item = currentDeck[currentIndex];
+      cardUnitTag.textContent = item.unitName;
+      questionText.innerText = item.q;
+
+      if (wrongIds.includes(item.id)) {
+        cardWrongMark.classList.remove('hidden');
+      } else {
+        cardWrongMark.classList.add('hidden');
+      }
+
+      // 選択肢をシャッフルして生成
+      const correctAnswer = item.choices[0];
+      const shuffledChoices = shuffleArray(item.choices);
+
+      choicesContainer.innerHTML = '';
+      shuffledChoices.forEach((choiceText, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.dataset.answer = choiceText;
+        btn.innerHTML = `<span class="choice-num">${idx + 1}</span><span>${choiceText}</span>`;
+        btn.addEventListener('click', () => handleAnswer(btn, choiceText === correctAnswer, correctAnswer, item));
+        choicesContainer.appendChild(btn);
+      });
+    }
+
+    function handleAnswer(selectedBtn, isCorrect, correctAnswer, item) {
+      if (answered) return;
+      answered = true;
+
+      const allBtns = choicesContainer.querySelectorAll('.choice-btn');
+      allBtns.forEach(btn => {
+        btn.disabled = true;
+        if (btn.dataset.answer === correctAnswer) {
+          btn.classList.add('correct');
+        }
+      });
+
+      if (isCorrect) {
+        score++;
+        selectedBtn.classList.add('correct');
+        feedbackBox.className = 'feedback-box is-correct';
+        feedbackTitle.textContent = '⭕ 正解！';
+        if (wrongIds.includes(item.id)) {
+          wrongIds = wrongIds.filter(id => id !== item.id);
+          saveWrongIds();
+          cardWrongMark.classList.add('hidden');
+        }
+      } else {
+        selectedBtn.classList.add('wrong');
+        feedbackBox.className = 'feedback-box is-wrong';
+        feedbackTitle.textContent = `❌ 不正解…（正解：${correctAnswer}）`;
+        if (!wrongIds.includes(item.id)) {
+          wrongIds.push(item.id);
+          saveWrongIds();
+          cardWrongMark.classList.remove('hidden');
+        }
+      }
+
+      updateStatus();
+      feedbackExplanation.textContent = `【解説】${item.exp}`;
+      feedbackBox.classList.remove('hidden');
+    }
+
+    nextBtn.addEventListener('click', () => {
+      if (unitSelect.value === 'wrong') {
+        currentDeck = quizData.filter(item => wrongIds.includes(item.id));
+        if (currentDeck.length === 0) {
+          renderQuestion();
+          return;
+        }
+        currentIndex = currentIndex % currentDeck.length;
+      } else {
+        currentIndex++;
+        if (currentIndex >= currentDeck.length) {
+          alert(`この単元の問題が終了しました！\n最終スコア: ${score} / ${currentDeck.length} 問正解`);
+          currentIndex = 0;
+          score = 0;
+        }
+      }
+      renderQuestion();
+    });
+
+    unitSelect.addEventListener('change', filterDeck);
+
+    shuffleBtn.addEventListener('click', () => {
+      currentDeck = shuffleArray(currentDeck);
+      currentIndex = 0;
+      score = 0;
+      renderQuestion();
+    });
+
+    backToAllBtn.addEventListener('click', () => {
+      unitSelect.value = 'all';
+      filterDeck();
+    });
+
+    clearWrongBtn.addEventListener('click', () => {
+      if (wrongIds.length === 0) return;
+      if (confirm('苦手リストをすべてリセットしますか？')) {
+        wrongIds = [];
+        saveWrongIds();
+        if (unitSelect.value === 'wrong') {
+          filterDeck();
+        } else {
+          renderQuestion();
+        }
+      }
+    });
+
+    // 初期表示
+    renderQuestion();
+  </script>
+</body>
+</html>
